@@ -15,7 +15,7 @@ def read_serial_and_save():
     filename = get_filename()
     with open(filename, "w", newline='') as file:  # Abrir archivo CSV
         writer = csv.writer(file)
-        writer.writerow(["Time", "Sensor", "PWM"])  # Escribir encabezado
+        writer.writerow(["Sensor"])  # Escribir encabezado
         print(f"Guardando datos en {filename}...")
         while True:
             try:
@@ -23,7 +23,7 @@ def read_serial_and_save():
                 if line:
                     print(f"Recibido: {line}")
                     data = line.split(",")  # Separar los datos por comas
-                    if len(data) == 3:  # Asegurarse de que la línea tenga tres valores
+                    if len(data) == 1:  # Asegurarse de que la línea tenga tres valores
                         writer.writerow(data)  # Escribir datos en el archivo CSV
             except KeyboardInterrupt:
                 print("Interrupción del usuario. Cerrando...")

@@ -1,20 +1,17 @@
 #include <encoder.h>
 
-#define MAV_SIZE    5
 
 // Functions
 void i2c_master_init(void);
 void i2c_device_init(void);
 esp_err_t i2c_master_read_register(uint8_t reg_addr, uint8_t *data);
-static void shift_mav_filter();
 
 // Handlers
 i2c_master_bus_handle_t bus_handle;
 i2c_master_dev_handle_t device_handle;
 
 // Data
-uint16_t mavBuffer[MAV_SIZE]={0};
-float sumMAV=0;
+uint8_t data_read[100];
 
 void encoder_init(void){
     i2c_master_init();
@@ -54,28 +51,17 @@ int read_as5600_position(void) {
     // Leer los registros de ángulo alto y bajo
     esp_err_t err_high = i2c_master_read_register(0x0C, &angle_high);
     esp_err_t err_low = i2c_master_read_register(0x0D, &angle_low);
-    sumMAV = 0;
+
     if (err_high == ESP_OK && err_low == ESP_OK) {
         // Combina los dos bytes en un valor de 12 bits
         angle = ((angle_high << 8) | angle_low) & 0x0FFF;
         
         // Convierte a grados (0-360)
         angle_degrees = (angle * 360.0) / 4096.0;
-        //mavBuffer[0] = (angle * 360.0) / 4096.0;
-        /*for(int j=0; j < MAV_SIZE; j++){
-            sumMAV += mavBuffer[j];
-        }
-        shift_mav_filter();
-        angle_degrees = sumMAV/(MAV_SIZE);*/
-        ESP_LOGI("AS5600", "Position: %d degrees", angle_degrees);
+        
+        //ESP_LOGI("AS5600", "Position: %.2f degrees", angle_degrees);
     } else {
         ESP_LOGE("AS5600", "Failed to read position");
     }
     return angle_degrees;
-}
-
-static void shift_mav_filter(){
-    for (int i = (MAV_SIZE-1); i > 0; i--) {
-        mavBuffer[i] = mavBuffer[i-1];
-    }
 }
