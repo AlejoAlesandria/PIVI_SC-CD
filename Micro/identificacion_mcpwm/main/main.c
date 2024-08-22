@@ -68,76 +68,47 @@ int prbs_sequence[1000] = {1, 1, 1, -1, -1, 1, 1, 1, -1, 1, 1, 1, -1, 1, 1, -1, 
 -1, -1, 1, -1, 1, 1, 1, 1, -1, 1, 1, 1 
 };
 int prbs_index = 0;
-int encoder_value = 0;
+int encoder_value[1000] = {0};
 int new_frequency = 0;
-
-
-// Function Prototypes
-void vMotorTask(void *pvParameters);
-void vEncoderTask(void *pvParameters);
+int index_encoder = 0;
 
 void app_main(void){
     encoder_init();
-    ledc_init();
-    xTaskCreatePinnedToCore(vMotorTask, 
-                            "Motor Task", 
-                            configMINIMAL_STACK_SIZE*3, 
-                            NULL, 
-                            tskIDLE_PRIORITY+1, 
-                            NULL, 
-                            0);
-    xTaskCreatePinnedToCore(vEncoderTask,
-                            "Encoder Task",
-                            configMINIMAL_STACK_SIZE*3,
-                            NULL,
-                            tskIDLE_PRIORITY+1,
-                            NULL,
-                            1);
-}
-
-// tarea que realiza el cambio de frecuencia de la señal PWM
-void vMotorTask(void *pvParameters){
+    mcpwm_init();
     TickType_t xLastWakeTime;
+    bool finalizado = false;
     xLastWakeTime = xTaskGetTickCount();
-    new_frequency = 20;
     while (true){
-
-        if(prbs_sequence[prbs_index] == 1){
-            motor_forward();
-        } else {
-            motor_backward();
+        if (!finalizado){ 
+            printf("Index PRBS: %d | Index Encoder: %d\n", prbs_index, index_encoder);
+            // Inyecta la señal PRBS al motor
+            if(prbs_sequence[prbs_index] == 1){
+                motor_forward();
+            } else {
+                motor_backward();
+            }
+            prbs_index = (prbs_index + 1) % 1000;
+            mcpwm_set_value_to_compare(1000);
+            
+            // Lee la posición del sensor
+            encoder_value[index_encoder] = read_as5600_position();
+            index_encoder = (index_encoder + 1) % 1000;
+            
+            // Espera para el próximo ciclo
+            vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(10)); 
+            
+            // Verifica si se ha completado la captura de datos
+            if (index_encoder == 0){
+                finalizado = true;
+            }
+        } else {     
+            printf("INICIO\n");
+            for (int i = 0; i < 1000; i++){
+                printf("%d\n", encoder_value[i]);
+                vTaskDelay(pdMS_TO_TICKS(10));
+            }
+            printf("FIN\n");
+            break; // Sale del bucle después de imprimir los datos
         }
-        
-        /*if (new_frequency >= 20 && new_frequency < 5000){
-            new_frequency += 500;
-        } else {
-            new_frequency = 20;
-        }*/
-        prbs_index = (prbs_index + 1) % 1000;
-        ledc_set_freq(LEDC_LOW_SPEED_MODE, LEDC_TIMER_0, new_frequency);
-
-        //motor_forward();
-        //new_frequency = 5000;
-        //ledc_set_freq(LEDC_LOW_SPEED_MODE, LEDC_TIMER_0, new_frequency);
-        /*vTaskDelay(pdMS_TO_TICKS(4000));
-        new_frequency = 20;
-        motor_forward();
-        ledc_set_freq(LEDC_LOW_SPEED_MODE, LEDC_TIMER_0, new_frequency);        
-        */
-       vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(2000));
-
-    }
-}
-
-void vEncoderTask(void *pvParameters){
-    TickType_t xLastWakeTime;
-    const TickType_t xFrequency = pdMS_TO_TICKS(1);
-    xLastWakeTime = xTaskGetTickCount();
-    while (true){
-        encoder_value = read_as5600_position();
-
-        printf("%d,%d\n", encoder_value, new_frequency);
-
-        vTaskDelayUntil(&xLastWakeTime, xFrequency);
     }
 }

@@ -4,35 +4,50 @@ import csv
 from datetime import datetime
 
 # Configura el puerto serial y la velocidad de transmisión (baud rate)
-ser = serial.Serial('/dev/ttyACM0', 115200, timeout=1)  # Cambia '/dev/ttyUSB0' al puerto correcto en tu sistema
+ser = serial.Serial('/dev/ttyACM0', 115200, timeout=0.01)  # Ajusta el timeout a un valor bajo para reducir el delay
 
 def get_filename():
-    # Genera un nombre de archivo basado en la fecha y hora actuales
+    """Genera un nombre de archivo basado en la fecha y hora actuales."""
     now = datetime.now()
     return f"data_{now.strftime('%Y%m%d_%H%M%S')}.csv"
 
-def read_serial_and_save():
+def save_data():
+    """Lee datos del puerto serial y los guarda en un archivo CSV después de recibir 'INICIO'."""
     filename = get_filename()
-    with open(filename, "w", newline='') as file:  # Abrir archivo CSV
+    with open(filename, mode="w", newline='') as file:
         writer = csv.writer(file)
         writer.writerow(["Sensor"])  # Escribir encabezado
         print(f"Guardando datos en {filename}...")
+
         while True:
-            try:
-                line = ser.readline().decode('utf-8').strip()  # Leer línea del puerto serial
-                if line:
-                    print(f"Recibido: {line}")
-                    data = line.split(",")  # Separar los datos por comas
-                    if len(data) == 1:  # Asegurarse de que la línea tenga tres valores
-                        writer.writerow(data)  # Escribir datos en el archivo CSV
-            except KeyboardInterrupt:
-                print("Interrupción del usuario. Cerrando...")
+            line = ser.readline().strip()  # Leer línea del puerto serial como bytes
+            if line:
+                try:
+                    decoded_line = line.decode('utf-8')
+                    if decoded_line.isdigit() or (decoded_line[0] == '-' and decoded_line[1:].isdigit()):
+                        writer.writerow([decoded_line])  # Escribir dato en el archivo CSV
+                except UnicodeDecodeError:
+                    print("Error al decodificar la línea.")
+            # Detener la lectura cuando se recibe el comando de fin de datos
+            if decoded_line == "FIN":
                 break
-            except Exception as e:
-                print(f"Error: {e}")
-                break
+            time.sleep(0.01)  # Reduzca el tiempo de espera para mejorar la respuesta
 
 if __name__ == "__main__":
-    # Espera para asegurar que el puerto serial esté listo
-    time.sleep(2)
-    read_serial_and_save()
+    print("Esperando la palabra 'INICIO' para empezar a guardar datos...")
+
+    while True:
+        line = ser.readline().strip()  # Leer línea del puerto serial como bytes
+        if line:
+            try:
+                decoded_line = line.decode('utf-8')
+                if decoded_line == "INICIO":
+                    print("Palabra 'INICIO' recibida. Empezando a guardar datos...")
+                    save_data()
+                    break
+            except UnicodeDecodeError:
+                print("Error al decodificar la línea.")
+        time.sleep(0.01)  # Reduzca el tiempo de espera para mejorar la respuesta
+
+    ser.close()  # Cerrar el puerto serial cuando el proceso termina
+    print("Proceso completado. ¡Archivo guardado!")

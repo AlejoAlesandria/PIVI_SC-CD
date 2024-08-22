@@ -61,13 +61,13 @@ int read_as5600_position(void) {
         
         // Convierte a grados (0-360)
         angle_degrees = (angle * 360.0) / 4096.0;
-        mavBuffer[0] = angle;
-        for(int j=0; j < MAV_SIZE; j++){
-            sumMAV += mavBuffer[j];
-        }
-        shift_mav_filter();
-        angle = sumMAV/(MAV_SIZE);
-        ESP_LOGI("AS5600", "Position: %d degrees", angle);
+        //mavBuffer[0] = angle;
+        //for(int j=0; j < MAV_SIZE; j++){
+        //    sumMAV += mavBuffer[j];
+        //}
+        //shift_mav_filter();
+        //angle = sumMAV/(MAV_SIZE);
+        //ESP_LOGI("AS5600", "Position: %d degrees", angle);
     } else {
         ESP_LOGE("AS5600", "Failed to read position");
     }
