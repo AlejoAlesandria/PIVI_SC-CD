@@ -26,6 +26,7 @@ def save_data():
                     decoded_line = line.decode('utf-8')
                     if decoded_line.isdigit() or (decoded_line[0] == '-' and decoded_line[1:].isdigit()):
                         writer.writerow([decoded_line])  # Escribir dato en el archivo CSV
+                        print(decoded_line)
                 except UnicodeDecodeError:
                     print("Error al decodificar la línea.")
             # Detener la lectura cuando se recibe el comando de fin de datos

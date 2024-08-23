@@ -37,7 +37,7 @@ void i2c_device_init(void){
     i2c_device_config_t i2c_device_config = {
         .dev_addr_length = I2C_ADDR_BIT_LEN_7,
         .device_address = 0x36,
-        .scl_speed_hz = 100000,
+        .scl_speed_hz = 200000,
     };
     ESP_ERROR_CHECK(i2c_master_bus_add_device(bus_handle, &i2c_device_config, &device_handle));   
 }
@@ -61,17 +61,17 @@ int read_as5600_position(void) {
         
         // Convierte a grados (0-360)
         angle_degrees = (angle * 360.0) / 4096.0;
-        mavBuffer[0] = angle;
-        for(int j=0; j < MAV_SIZE; j++){
-            sumMAV += mavBuffer[j];
-        }
-        shift_mav_filter();
-        angle = sumMAV/(MAV_SIZE);
-        ESP_LOGI("AS5600", "Position: %d degrees", angle);
+        //mavBuffer[0] = angle;
+        //for(int j=0; j < MAV_SIZE; j++){
+        //    sumMAV += mavBuffer[j];
+        //}
+        //shift_mav_filter();
+        //angle = sumMAV/(MAV_SIZE);
+        ESP_LOGI("AS5600", "Position: %d degrees", angle_degrees);
     } else {
         ESP_LOGE("AS5600", "Failed to read position");
     }
-    return angle;
+    return angle_degrees;
 }
 
 static void shift_mav_filter(){
