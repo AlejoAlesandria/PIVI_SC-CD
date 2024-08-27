@@ -12,7 +12,7 @@ ts = generateTimeseries(sign);
 
 % Step 3: Extract the PRBS data as a matrix
 prbs_matrix = ts.Data;
-writematrix(prbs_matrix', 'prbs_sequence.csv')
+writematrix(prbs_matrix', 'prbs_sequence_final.csv')
 t = 0:Ts:Ts*length(prbs_matrix)-Ts;
 
 % Display the matrix

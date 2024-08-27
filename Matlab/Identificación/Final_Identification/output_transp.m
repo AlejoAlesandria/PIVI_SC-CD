@@ -1,4 +1,4 @@
-data = readtable('output.csv');
+data = readtable('output_final.csv');
 % Convertir la tabla a una matriz
 matriz = table2array(data);
 prbs_multi = prbs_matrix*4095

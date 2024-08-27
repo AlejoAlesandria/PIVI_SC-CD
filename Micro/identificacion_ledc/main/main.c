@@ -84,9 +84,9 @@ void timer_callback(void* arg){
     }
 
     if(prbs_sequence[prbs_index] > 0){
-        motor_forward();
-    } else{
         motor_backward();
+    } else{
+        motor_forward();
     }
 
     encoder_value[prbs_index] = read_as5600_position();

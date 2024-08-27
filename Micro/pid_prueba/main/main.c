@@ -32,7 +32,7 @@
 #define PRBS_PERIOD_MS 1000
 #define PWM_HIGH 1000
 #define PWM_LOW 0
-#define SET_POINT_VALUE 145
+#define SET_POINT_VALUE 325
 #define SAMPLE_TIME_US 10000
 
 // Variables
@@ -43,10 +43,10 @@ int pwm_output_bits = 0;
 
 
 // PID constants and variables
-const float Kp = -6.3147; // -4.1051
-const float Ki = -0.0052191; // -0.0091758
-const float Kd = 205.0867; // 133.4577
-const float Nc = 32.4827; // 32.5156
+const float Kp = 300.7538; // -4.1051
+const float Ki = 0.42869; // -0.0091758
+const float Kd = -185.0353; // 133.4577
+const float Nc = 30.88; // 32.5156
 const float Ts = SAMPLE_TIME_US/1000000.0;
 const int Ts_ms = Ts * 1000;
 int setpoint_angle = SET_POINT_VALUE;
@@ -107,13 +107,13 @@ void timer_callback(void* arg){
         input_array[0] = setpoint_angle - read_as5600_position();
         output_array[0] = b_coefficients[0] * input_array[0] + b_coefficients[1] * input_array[1] + b_coefficients[2] * input_array[2] - a_coefficients[1] * output_array[1] - a_coefficients[2] * output_array[2];       
         if(output_array[0] < 0){
-            motor_backward();
-        } else if (output_array[0] > 0){
             motor_forward();
-        }else{
+        } else if (output_array[0] > 0){
+            motor_backward();
+        }//else{
         //if(output_array[0] == 0){
-            motor_stop();
-        }
+           // motor_stop();
+        //}
         pwm_output_bits = abs((int)output_array[0]);
         /*if (pwm_output_bits > 1000){
             pwm_output_bits = 1000;
