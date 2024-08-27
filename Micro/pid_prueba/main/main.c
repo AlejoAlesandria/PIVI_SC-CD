@@ -32,7 +32,7 @@
 #define PRBS_PERIOD_MS 1000
 #define PWM_HIGH 1000
 #define PWM_LOW 0
-#define SET_POINT_VALUE 144
+#define SET_POINT_VALUE 145
 #define SAMPLE_TIME_US 10000
 
 // Variables
@@ -43,10 +43,10 @@ int pwm_output_bits = 0;
 
 
 // PID constants and variables
-const float Kp = 71.8733; // -4.1051
-const float Ki = 1.7349; // -0.0091758
-const float Kd = 27.4256; // 133.4577
-const float Nc = 0.36405; // 32.5156
+const float Kp = -6.3147; // -4.1051
+const float Ki = -0.0052191; // -0.0091758
+const float Kd = 205.0867; // 133.4577
+const float Nc = 32.4827; // 32.5156
 const float Ts = SAMPLE_TIME_US/1000000.0;
 const int Ts_ms = Ts * 1000;
 int setpoint_angle = SET_POINT_VALUE;
