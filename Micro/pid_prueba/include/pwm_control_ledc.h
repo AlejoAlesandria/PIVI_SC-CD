@@ -26,8 +26,8 @@
 
 void ledc_init(void);
 
-void motor_forward(void);
-void motor_backward(void);
+void motor_counterclockwise(void);
+void motor_clockwise(void);
 void motor_stop(void);
 
 // No se que otra función debe ser pública, seguramente la que se utilice para comunicar el ángulo con el duty del pwm.

@@ -55,12 +55,12 @@ void gpio_pin_configuration(void){
     gpio_set_direction(PIN_IN2, GPIO_MODE_OUTPUT);
 }
 
-void motor_forward(void){
+void motor_counterclockwise(void){
     gpio_set_level(PIN_IN1, 1);
     gpio_set_level(PIN_IN2, 0);
 }
 
-void motor_backward(void){
+void motor_clockwise(void){
     gpio_set_level(PIN_IN1, 0);
     gpio_set_level(PIN_IN2, 1);
 }
