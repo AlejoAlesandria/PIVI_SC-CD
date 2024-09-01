@@ -137,7 +137,7 @@ void timer_callback(void* arg){
     output_array[1] = output_array[0];
 
     // Comment index++ for continuous operation
-    //index_value++; 
+    index_value++; 
 }
 
 long map(long x, long in_min, long in_max, long out_min, long out_max) {
