@@ -17,7 +17,7 @@
 #include "esp_timer.h"
 #include "math.h"
 
-#define SET_POINT_VALUE     333     // Pendulum angular position in degrees
+#define SET_POINT_VALUE     152     // Pendulum angular position in degrees
 #define SAMPLE_TIME_US      10000   // Sample time in microseconds (us)
 
 #define SAMPLE_INDEX        4200    // Samples to be taken
@@ -37,8 +37,8 @@ int output[SAMPLE_INDEX];           // Output values for plotting
 
 // PID constants and variables
 int setpoint_angle = SET_POINT_VALUE;       // Setpoint angle in degrees
-const float Kp = -4.1051;                   // Porportional constant
-const float Ki = -0.0091758;                // Integral constant
+const float Kp = 4.1051;                   // Porportional constant
+const float Ki = 0.0091758;                // Integral constant
 const float Kd = 133.4577;                  // Derivative constant
 const float N = 32.5156;                    // Derivative filter constant
 const float Ts = SAMPLE_TIME_US/1000000.0;  // Sample time in seconds
@@ -115,7 +115,7 @@ void timer_callback(void* arg){
     } else{
         ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, map(0, FROM_LOW, FROM_HIGH, TO_LOW, TO_HIGH));
     }
-
+    //printf("%f\n", output_array[0]);
     pwm_output_bits = abs((int)output_array[0]);
     
     if (pwm_output_bits > 4095){

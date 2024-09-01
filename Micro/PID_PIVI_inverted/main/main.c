@@ -17,7 +17,7 @@
 #include "esp_timer.h"
 #include "math.h"
 
-#define SET_POINT_VALUE     333     // Pendulum angular position in degrees
+#define SET_POINT_VALUE     330     // Pendulum angular position in degrees
 #define SAMPLE_TIME_US      10000   // Sample time in microseconds (us)
 
 #define SAMPLE_INDEX        4200    // Samples to be taken
@@ -37,10 +37,10 @@ int output[SAMPLE_INDEX];           // Output values for plotting
 
 // PID constants and variables
 int setpoint_angle = SET_POINT_VALUE;       // Setpoint angle in degrees
-const float Kp = -3982.54;                   // Porportional constant
-const float Ki = -0.00274315;                // Integral constant
-const float Kd = 0;                  // Derivative constant
-const float N = 0.1667184;                    // Derivative filter constant
+const float Kp = -34.268019;                   // Porportional constant
+const float Ki = 0;                // Integral constant
+const float Kd = -0.001238441;                  // Derivative constant
+const float N = 18.19876;                    // Derivative filter constant
 const float Ts = SAMPLE_TIME_US/1000000.0;  // Sample time in seconds
 const int Ts_ms = Ts * 1000;                // Sample time in milliseconds
 float input_array[3] = {0, 0, 0};           // Input array for PID
@@ -100,22 +100,24 @@ void timer_callback(void* arg){
         esp_timer_stop(timer_handle);
         return;
     }
-
+    pwm_output_bits_mapped = 0;
     setpoint_angle = SET_POINT_VALUE;
     output[index_value] = read_as5600_position(); // Save data for plotting
 
     input_array[0] = setpoint_angle - read_as5600_position();
 
     output_array[0] = b_coefficients[0] * input_array[0] + b_coefficients[1] * input_array[1] + b_coefficients[2] * input_array[2] - a_coefficients[1] * output_array[1] - a_coefficients[2] * output_array[2];       
-    
+
     if(output_array[0] > 0){
         motor_clockwise();
     } else if (output_array[0] < 0){
         motor_counterclockwise();
     } else{
+        motor_stop();
         ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, map(0, FROM_LOW, FROM_HIGH, TO_LOW, TO_HIGH));
     }
 
+    //printf("Output: %f\n", output_array[0]);
     pwm_output_bits = abs((int)output_array[0]);
     
     if (pwm_output_bits > 4095){

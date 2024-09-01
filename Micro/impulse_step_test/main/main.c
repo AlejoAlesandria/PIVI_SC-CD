@@ -92,7 +92,7 @@ void timer_callback(void* arg){
     motor_stop();
     ledc_set_duty_and_update(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0, 0);
     if (prbs_index > 50 && prbs_index < 60){
-        motor_counterclockwise();
+        motor_clockwise();
         ledc_set_duty_and_update(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, map(DUTY_CYCLE, FROM_LOW, FROM_HIGH, TO_LOW, TO_HIGH), 0);
     }
 
