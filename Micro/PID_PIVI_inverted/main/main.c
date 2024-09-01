@@ -17,7 +17,7 @@
 #include "esp_timer.h"
 #include "math.h"
 
-#define SET_POINT_VALUE     330     // Pendulum angular position in degrees
+#define SET_POINT_VALUE     328     // Pendulum angular position in degrees
 #define SAMPLE_TIME_US      10000   // Sample time in microseconds (us)
 
 #define SAMPLE_INDEX        4200    // Samples to be taken
