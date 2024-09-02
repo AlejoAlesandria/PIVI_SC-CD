@@ -17,10 +17,10 @@
 #include "esp_timer.h"
 #include "math.h"
 
-#define SET_POINT_VALUE     328     // Pendulum angular position in degrees
+#define SET_POINT_VALUE     330     // Pendulum angular position in degrees
 #define SAMPLE_TIME_US      10000   // Sample time in microseconds (us)
 
-#define SAMPLE_INDEX        4200    // Samples to be taken
+#define SAMPLE_INDEX        2200    // Samples to be taken
 
 // Constants for PWM mapping
 #define FROM_LOW            0       // Initial PWM range minimum value (0 %)
@@ -33,7 +33,8 @@ int index_value = 0;                // Index for output array
 long pwm_output_bits = 0;           // Last PID output value to apply to the motor
 long pwm_output_bits_mapped = 0;    // PWM value mapped to the motor
 int output[SAMPLE_INDEX];           // Output values for plotting
-
+int output_pwm[SAMPLE_INDEX];           // Output values for plotting
+bool is_clockwise = false;
 
 // PID constants and variables
 int setpoint_angle = SET_POINT_VALUE;       // Setpoint angle in degrees
@@ -96,6 +97,7 @@ void app_main(void){
 
 void timer_callback(void* arg){
     if(index_value == SAMPLE_INDEX){
+        motor_stop();
         ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, map(0, FROM_LOW, FROM_HIGH, TO_LOW, TO_HIGH));
         esp_timer_stop(timer_handle);
         return;
@@ -110,25 +112,30 @@ void timer_callback(void* arg){
 
     if(output_array[0] > 0){
         motor_clockwise();
+        is_clockwise = true;
     } else if (output_array[0] < 0){
         motor_counterclockwise();
+        is_clockwise = false;
     } else{
         motor_stop();
         ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, map(0, FROM_LOW, FROM_HIGH, TO_LOW, TO_HIGH));
+        is_clockwise = true;
     }
 
-    //printf("Output: %f\n", output_array[0]);
+    if (output_array[0] < -4095){
+        output_array[0] = -4095;
+    } else if (output_array[0] > 4095){
+        output_array[0] = 4095;
+    }
+
     pwm_output_bits = abs((int)output_array[0]);
     
-    if (pwm_output_bits > 4095){
-        pwm_output_bits = 4095;
-    }
-    if (pwm_output_bits < 0){
-        pwm_output_bits = 0;
-    }
-
     pwm_output_bits_mapped = map(pwm_output_bits, FROM_LOW, FROM_HIGH, TO_LOW, TO_HIGH);
-
+    if(!is_clockwise){
+        output_pwm[index_value] = -pwm_output_bits_mapped;
+    } else{
+        output_pwm[index_value] = pwm_output_bits_mapped;
+    }
     ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, pwm_output_bits_mapped);
 
     input_array[2] = input_array[1];
@@ -137,7 +144,7 @@ void timer_callback(void* arg){
     output_array[1] = output_array[0];
 
     // Comment index++ for continuous operation
-    index_value++; 
+    //index_value++; 
 }
 
 long map(long x, long in_min, long in_max, long out_min, long out_max) {
@@ -149,6 +156,15 @@ void print_values(){
     printf("INICIO\n");
     for(int i = 0; i < SAMPLE_INDEX; i++){
         printf("%d\n", output[i]);
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+    printf("FIN\n");
+    
+    vTaskDelay(10000 / portTICK_PERIOD_MS);
+
+    printf("INICIO\n");
+    for(int i = 0; i < SAMPLE_INDEX; i++){
+        printf("%d\n", output_pwm[i]);
         vTaskDelay(pdMS_TO_TICKS(10));
     }
     printf("FIN\n");

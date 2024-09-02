@@ -37,10 +37,10 @@ int output[SAMPLE_INDEX];           // Output values for plotting
 
 // PID constants and variables
 int setpoint_angle = SET_POINT_VALUE;       // Setpoint angle in degrees
-const float Kp = 4.1051;                   // Porportional constant
-const float Ki = 0.0091758;                // Integral constant
-const float Kd = 133.4577;                  // Derivative constant
-const float N = 32.5156;                    // Derivative filter constant
+const float Kp = 0.18892;//4.1051;                   // Porportional constant
+const float Ki = 37.7834;//0.0091758;                // Integral constant
+const float Kd = 0;//133.4577;                  // Derivative constant
+const float N = 100;//32.5156;                    // Derivative filter constant
 const float Ts = SAMPLE_TIME_US/1000000.0;  // Sample time in seconds
 const int Ts_ms = Ts * 1000;                // Sample time in milliseconds
 float input_array[3] = {0, 0, 0};           // Input array for PID
