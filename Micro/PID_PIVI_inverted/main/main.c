@@ -34,11 +34,11 @@ long pwm_output_bits = 0;           // Last PID output value to apply to the mot
 long pwm_output_bits_mapped = 0;    // PWM value mapped to the motor
 int output[SAMPLE_INDEX];           // Output values for plotting
 int output_pwm[SAMPLE_INDEX];           // Output values for plotting
-bool is_clockwise = false;
+bool is_clockwise = false;          // Motor direction flag for plotting
 
 // PID constants and variables
 int setpoint_angle = SET_POINT_VALUE;       // Setpoint angle in degrees
-const float Kp = -34.268019;                   // Porportional constant
+const float Kp = -342.68019;                   // Porportional constant
 const float Ki = 0;                // Integral constant
 const float Kd = -0.001238441;                  // Derivative constant
 const float N = 18.19876;                    // Derivative filter constant
