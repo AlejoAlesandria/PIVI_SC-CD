@@ -2,39 +2,44 @@ clear all;
 close all;
 %% Parámetros de Simulación
 Ts = 0.01;
-Tf = 20;
+Tf = 30;
 Nsim = Tf/Ts;
 t = 0:Ts:Tf;
 
 %% Señal de Entrada - Set Point
 r_sp = 2*ones(size(t));
 
-%% Espacio de estados identificado
-A = [0 1 0; 4.8976 -0.52198 0.319; 0 0 -0.33792];
-B = [0; -0.468; 0.495];
-C = [1 0 0];
-D = 0;
+%% Espacio de estados identificado invertido - ecuacion calculada
+% A = [0 1 0; 4.8976 -0.52198 0.319; 0 0 -0.33792];
+% B = [0; -0.468; 0.495];
+% C = [1 0 0];
+% D = 0;
 
-% Funcion de transferencia circuito RC
-% num = 1/(R*C);
-% den = [1 1/(R*C)];
-% [A, B, C, D] = tf2ss(num,den);
+% A = [0 1; -0.9903 1.99];
+% B = [-0.000002972; -0.000009109];
+% C = [1 0];
+% D = 0;
+
+% Funcion de transferencia Pendulo natural
+num = [-0.001862 -0.05642];
+den = [1 0.4719 4.919];
+[A, B, C, D] = tf2ss(num,den);
 
 sys_ss = ss(A, B, C, D);
 
 [SS_disc] = c2d(sys_ss, Ts);
 
+% SS_disc = ss(A, B, C, D, Ts);
+% sys_ss = d2c(SS_disc);
 %% Tamaño vectores Espacio de Estados
-nx = length(sys_ss.A);
+nx = length(SS_disc.A);
 
 %% Asignación de Polos
-pole1 = -0.1+0.7j;
-pole2 = -0.1-0.7j;
-pole3 = -0.8;
-pole4 = -0.7;
-p = [pole1 pole2 pole3 pole4];
-
-p = [pole1 pole2 pole3 pole4];
+pole1 = -0.005+0.7j;
+pole2 = -0.005-0.7j;
+pole3 = -0.5;
+pole4 = -0.1;
+p = [pole1 pole2 pole3];
 
 %% Determinacion de la matriz K - caso en donde existe integrador
 %%[K, prec] = place(SS_disc.A, SS_disc.B, p);
@@ -55,7 +60,7 @@ x = ones(nx, Nsim + 1) .* x0;
 
 % Observador
 x_hat = ones(nx, Nsim + 1) .* x0;
-L = [1; 0.2; 0.2]; % Ganancia del observador
+L = [0.5; 0.5]; % Ganancia del observador
 
 % Salidas del simulador
 yOut  = SS_disc.C*x0; 
