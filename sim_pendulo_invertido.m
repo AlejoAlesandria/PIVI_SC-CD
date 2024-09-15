@@ -15,16 +15,21 @@ r_sp = 2*ones(size(t));
 % C = [1 0 0];
 % D = 0;
 
+A = [0 1 0; 0 0 1; -0.4588 -12.83 -3.986];
+B = [-0.00008368; -0.05376; 0.01643];
+C = [1 0 0];
+D = 0;
+
 % A = [0 1; -0.9903 1.99];
 % B = [-0.000002972; -0.000009109];
 % C = [1 0];
 % D = 0;
 
 % Funcion de transferencia Pendulo natural
-num = [-0.001862 -0.05642];
-den = [1 0.4719 4.919];
-[A, B, C, D] = tf2ss(num,den);
-
+% num = [-0.001862 -0.05642];
+% den = [1 0.4719 4.919];
+% [A, B, C, D] = tf2ss(num,den);
+% 
 sys_ss = ss(A, B, C, D);
 
 [SS_disc] = c2d(sys_ss, Ts);
@@ -35,11 +40,11 @@ sys_ss = ss(A, B, C, D);
 nx = length(SS_disc.A);
 
 %% Asignación de Polos
-pole1 = -0.005+0.7j;
-pole2 = -0.005-0.7j;
-pole3 = -0.5;
-pole4 = -0.1;
-p = [pole1 pole2 pole3];
+pole1 = -0.1+0.8j;
+pole2 = -0.1-0.8*j;
+pole3 = 0.9;
+pole4 = -0.7;
+p = [pole1 pole2 pole3 pole4];
 
 %% Determinacion de la matriz K - caso en donde existe integrador
 %%[K, prec] = place(SS_disc.A, SS_disc.B, p);
@@ -60,7 +65,7 @@ x = ones(nx, Nsim + 1) .* x0;
 
 % Observador
 x_hat = ones(nx, Nsim + 1) .* x0;
-L = [0.5; 0.5]; % Ganancia del observador
+L = [0.2;0.2;0.2]; % Ganancia del observador
 
 % Salidas del simulador
 yOut  = SS_disc.C*x0; 

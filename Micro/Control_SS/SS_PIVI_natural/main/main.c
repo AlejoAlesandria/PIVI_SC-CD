@@ -17,10 +17,10 @@
 #include "esp_timer.h"
 #include "math.h"
 
-#define SET_POINT_VALUE     150     // Pendulum angular position in degrees
+#define SET_POINT_VALUE     152     // Pendulum angular position in degrees
 #define SAMPLE_TIME_US      10000   // Sample time in microseconds (us)
 
-#define SAMPLE_INDEX        4200    // Samples to be taken
+#define SAMPLE_INDEX        2200    // Samples to be taken
 
 // Constants for PWM mapping
 #define FROM_LOW            0       // Initial PWM range minimum value (0 %)
@@ -32,30 +32,52 @@
 int index_value = 0;                // Index for output array
 long pwm_output_bits = 0;           // Last PID output value to apply to the motor
 long pwm_output_bits_mapped = 0;    // PWM value mapped to the motor
-int output[SAMPLE_INDEX];           // Output values for plotting
+bool is_clockwise = false;          // Motor direction flag for plotting
 
-
-// PID constants and variables
+// State Space constants and variables
 int setpoint_angle = SET_POINT_VALUE;       // Setpoint angle in degrees
-const float Kp = -3376.3148;//4.1051;                   // Porportional constant
-const float Ki = 0;//0.0091758;                // Integral constant
-const float Kd = -1000.3429;//133.4577;                  // Derivative constant
-const float N = 10.72801;//32.5156;                    // Derivative filter constant
-const float Ts = SAMPLE_TIME_US/1000000.0;  // Sample time in seconds
-const int Ts_ms = Ts * 1000;                // Sample time in milliseconds
-float input_array[3] = {0, 0, 0};           // Input array for PID
-float output_array[3] = {0, 0, 0};          // Output array for PID
+int error = 0;                              // Error value
+int acumulated_error = 0;                   // Previous error value
 
-const float a_coefficients[3] = {           // Output coefficients for the PID
-    1,
-    -2 + N * Ts,
-    1 - N * Ts
-};
-const float b_coefficients[3] = {           // Input coefficients for the PID
-    Kp + Kd * N,
-    -2 * Kp - 2 * Kd * N + Ki * Ts + Kp * N * Ts,
-    Kp + Kd * N - Ki * Ts - Kp * N * Ts + Ki * N * Ts * Ts
-};
+float a11 = 1.0;
+float a12 = 0.009998;
+float a13 = 0.00004934;
+float a21 = -0.00002264;
+float a22 = 0.9994;
+float a23 = 0.009801;
+float a31 = -0.004497;
+float a32 = -0.1258;
+float a33 = 0.9603;
+
+float b11 = -0.000003522;
+float b21 = -0.0005367;
+float b31 = 0.0001951;
+
+float c11 = 1.0;
+float c12 = 0.0;
+float c13 = 0.0;
+
+// Luenberger observer gains
+float l11 = 0.5;
+float l21 = 0.5;
+float l31 = 0.5;
+
+// State variables
+float x1_hat[2] = {0.0, 0.0};         // State vector
+float x2_hat[2] = {0.0, 0.0};     // State vector
+float x3_hat[2] = {0.0, 0.0};     // State vector
+
+// Control signal
+float u_signal = 0;                         // Control signal
+
+// Pole placement controller gains
+const float K_new[3] = {-139.4000, -28.900, -89.500};
+const float ki = 22.9900;
+
+int angle_value_degree = 0;
+
+// Output signal of the system
+int y_value_degree = 0;
 
 // Handles
 esp_timer_handle_t timer_handle;
@@ -63,7 +85,6 @@ esp_timer_handle_t timer_handle;
 // Function prototypes
 void timer_callback(void* arg);                                             // Timer callback function - periodic task Ts = 0.01 s
 long map(long x, long in_min, long in_max, long out_min, long out_max);     // Map function for PWM values
-void print_values();                                                        // Print output values for plotting
 
 void app_main(void){
     encoder_init();
@@ -75,79 +96,68 @@ void app_main(void){
         .dispatch_method = ESP_TIMER_TASK,
         .name = "PID Timer"
     };
-
-    //ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 3276);
     esp_timer_create(&timer_args, &timer_handle);
 
     vTaskDelay(5000 / portTICK_PERIOD_MS);
 
     esp_timer_start_periodic(timer_handle, SAMPLE_TIME_US);
-
-    while (true){
-        if(!esp_timer_is_active(timer_handle)){
-            printf("Setpoint sequence completed, printing output values:\n");
-            print_values();
-            break;
-        }
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-    }
-    
 }
 
 void timer_callback(void* arg){
-    if(index_value == SAMPLE_INDEX){
-        ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, map(0, FROM_LOW, FROM_HIGH, TO_LOW, TO_HIGH));
-        esp_timer_stop(timer_handle);
-        return;
-    }
+    // Read encoder value
+    angle_value_degree = read_as5600_position();
+    y_value_degree = angle_value_degree;
 
-    setpoint_angle = SET_POINT_VALUE;
-    output[index_value] = read_as5600_position(); // Save data for plotting
+    error = setpoint_angle - y_value_degree;
+   // State space model
+    x1_hat[0] = x1_hat[1];
+    x2_hat[0] = x2_hat[1];
+    x3_hat[0] = x3_hat[1];
+    //printf("x1 = %.2f \n", x1_hat[0]);
+    //printf("x2 = %.2f \n", x2_hat[0]);
+    //printf("x3 = %.2f \n", x3_hat[0]);
 
-    input_array[0] = setpoint_angle - read_as5600_position();
+    /*---------- 3rd order -------------*/
+    u_signal = -ki * acumulated_error - (K_new[0] * x1_hat[0] + K_new[1] * x2_hat[0] + K_new[2] * x3_hat[0]);
+    //u_signal = -(K_new[0] * x1_hat[0] + K_new[1] * x2_hat[0] + K_new[2] * x3_hat[0]);
+    printf("u_signal = %.2f \n", u_signal);
+    x1_hat[1] = (a11-l11*c11) * x1_hat[0] + (a12-l11*c12) * x2_hat[0] + (a13-l11*c13) * x3_hat[0] + b11 * u_signal + l11 * y_value_degree;
+    x2_hat[1] = (a21-l21*c11) * x1_hat[0] + (a22-l21*c12) * x2_hat[0] + (a23-l21*c13) * x3_hat[0] + b21 * u_signal + l21 * y_value_degree;
+    x3_hat[1] = (a31-l31*c11) * x1_hat[0] + (a32-l31*c12) * x2_hat[0] + (a33-l31*c13) * x3_hat[0] + b31 * u_signal + l31 * y_value_degree;
 
-    output_array[0] = b_coefficients[0] * input_array[0] + b_coefficients[1] * input_array[1] + b_coefficients[2] * input_array[2] - a_coefficients[1] * output_array[1] - a_coefficients[2] * output_array[2];       
+    /*---------- 2nd order -------------*/
+    //u_signal = -ki * acumulated_error -(K_new[0] * x1_hat[0] + K_new[1] * x2_hat[0]);
+    //printf("u_signal = %.2f \n", u_signal);
+    //x1_hat[1] = (a11-l11*c11)*x1_hat[0] + (a12-l11*c12)*x2_hat[0] + b11 * u_signal + l11 * y_value_degree;
+    //x2_hat[1] = (a21-l21*c11)*x1_hat[0] + (a22-l21*c12)*x2_hat[0] + b21 * u_signal + l21 * y_value_degree;
+    //printf("x1 = %.2f \n", x2_hat[1]);
     
-    if(output_array[0] > 0){
+    if(x1_hat[1] > 0){
         motor_clockwise();
-    } else if (output_array[0] < 0){
+        is_clockwise = true;
+    } else if (x1_hat[1] < 0){
         motor_counterclockwise();
+        is_clockwise = false;
     } else{
+        motor_stop();
         ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, map(0, FROM_LOW, FROM_HIGH, TO_LOW, TO_HIGH));
-    }
-    printf("%f\n", output_array[0]);
-    pwm_output_bits = abs((int)output_array[0]);
-    
-    if (pwm_output_bits > 4095){
-        pwm_output_bits = 4095;
-    }
-    if (pwm_output_bits < 0){
-        pwm_output_bits = 0;
+        is_clockwise = true;
+    } 
+
+    if (u_signal > 4095){
+        u_signal = 4095;
+    } else if (u_signal < -4095){
+        u_signal = -4095;
     }
 
+    pwm_output_bits = abs((long)u_signal);
     pwm_output_bits_mapped = map(pwm_output_bits, FROM_LOW, FROM_HIGH, TO_LOW, TO_HIGH);
-
+    
     ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, pwm_output_bits_mapped);
-
-    input_array[2] = input_array[1];
-    input_array[1] = input_array[0];
-    output_array[2] = output_array[1];
-    output_array[1] = output_array[0];
-
-    // Comment index++ for continuous operation
-    //index_value++; 
+    //printf("PWM: %ld\n", pwm_output_bits_mapped);
+    acumulated_error += error;
 }
 
 long map(long x, long in_min, long in_max, long out_min, long out_max) {
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-}
-
-// Function to print output values for plotting
-void print_values(){
-    printf("INICIO\n");
-    for(int i = 0; i < SAMPLE_INDEX; i++){
-        printf("%d\n", output[i]);
-        vTaskDelay(pdMS_TO_TICKS(10));
-    }
-    printf("FIN\n");
 }
