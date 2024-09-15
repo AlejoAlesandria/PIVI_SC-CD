@@ -40,10 +40,10 @@ SS_disc = c2d(sys_ss, Ts);
 nx = length(SS_disc.A);
 
 %% Determinación de la matriz K - LQR
-Q = diag([10000 1000 10000 1000]);
+Q = diag([10000 1000 10000]);
 R = 0.1;
 
-K_hat = lqi(SS_disc, Q, R);
+K_hat = lqr(SS_disc, Q, R);
 K_new = K_hat(1:nx);
 ki = K_hat(end);
 
@@ -136,14 +136,39 @@ grid on
 %% Gráficos de la estimación de los estados
 figure(3)
 hold on
+subplot(2,1,1)
+    hold on
+    for i = 1:nx
+        plot(t, x_hat(i, 1:Nsim+1));
+    end
+    legend('x_{hat}(1)','x_{hat}(2)','x_{hat}(3)');
+    grid on
+    title('Estimación de los estados x_hat');
+    xlabel('Tiempo [s]');
+    ylabel('Estados estimados');
+subplot(2,1,2)
+    hold on
+    for i = 1:nx
+        plot(t, x(i, 1:Nsim+1));
+    end
+    legend('x(1)','x(2)','x(3)');
+    grid on
+    title('Estados reales x');
+    xlabel('Tiempo [s]');
+    ylabel('Estados estimados');
+
+%% Gráficos de la estimación de los estados junto
+figure(4)
+hold on
 for i = 1:nx
     plot(t, x_hat(i, 1:Nsim+1));
 end
+legend('x_{hat}(1)','x_{hat}(2)','x_{hat}(3)');
 for i = 1:nx
     plot(t, x(i, 1:Nsim+1));
 end
-legend('x_{hat}(1)','x_{hat}(2)','x(1)','x(2)');
-title('Estimación de los estados x_hat');
+legend('x_{hat}(1)','x_{hat}(2)','x_{hat}(3)','x(1)','x(2)','x(3)');
+grid on
+title('Estados reales x y estimados x_{hat}');
 xlabel('Tiempo [s]');
 ylabel('Estados estimados');
-grid on
