@@ -10,15 +10,15 @@ t = 0:Ts:Tf;
 r_sp = 2*ones(size(t));
 
 %% Espacio de estados identificado invertido - ecuacion calculada
-% A = [0 1 0; 4.8976 -0.52198 0.319; 0 0 -0.33792];
-% B = [0; -0.468; 0.495];
-% C = [1 0 0];
-% D = 0;
-
-A = [0 1 0; 0 0 1; -0.4588 -12.83 -3.986];
-B = [-0.00008368; -0.05376; 0.01643];
+A = [0 1 0; 4.8976 -0.52198 0.319; 0 0 -0.33792];
+B = [0; -0.468; 0.495];
 C = [1 0 0];
 D = 0;
+
+% A = [0 1 0; 0 0 1; -0.4588 -12.83 -3.986];
+% B = [-0.00008368; -0.05376; 0.01643];
+% C = [1 0 0];
+% D = 0;
 
 % A = [0 1; -0.9903 1.99];
 % B = [-0.000002972; -0.000009109];
@@ -32,40 +32,41 @@ D = 0;
 % 
 sys_ss = ss(A, B, C, D);
 
-[SS_disc] = c2d(sys_ss, Ts);
+SS_disc = c2d(sys_ss, Ts);
 
 % SS_disc = ss(A, B, C, D, Ts);
 % sys_ss = d2c(SS_disc);
 %% Tamaño vectores Espacio de Estados
 nx = length(SS_disc.A);
 
-%% Asignación de Polos
-pole1 = -0.1+0.5*j;
-pole2 = -0.1-0.5*j;
-pole3 = 0.9;
-pole4 = -0.7;
-p = [pole1 pole2 pole3 pole4];
+%% Determinación de la matriz K - LQR
+Q = diag([100000 1000000 10000000 1000000]);
+R = 1000;
 
-%% Determinacion de la matriz K - caso en donde existe integrador
-%%[K, prec] = place(SS_disc.A, SS_disc.B, p);
-
-%% Determinación de la matriz K - caso en donde no existe integrador 
-% Servosistema tipo 1 planta sin integrador
-A_hat = [SS_disc.A zeros(nx, 1); -SS_disc.C 0];
-B_hat = [SS_disc.B; 0];
-p_new = p;
-%K_hat = place(A_hat, B_hat, p_new);
-K_hat = place(A_hat,B_hat, p);
+K_hat = lqi(SS_disc, Q, R);
 K_new = K_hat(1:nx);
 ki = K_hat(end);
 
-%% Variables Iniciales
+%% Observador
 x0 = zeros(1, nx)';
-x = ones(nx, Nsim + 1) .* x0;
 
-% Observador
 x_hat = ones(nx, Nsim + 1) .* x0;
-L = [0.2;0.2;0.2]; % Ganancia del observador
+
+% Polos en plano S
+pole1_obs = -10;
+pole2_obs = -1+j*0.2;
+pole3_obs = -1-j*0.2;
+% Polos mapeados a plano Z
+pole1_obs_z = exp(pole1_obs*Ts);
+pole2_obs_z = exp(pole2_obs*Ts);
+pole3_obs_z = exp(pole3_obs*Ts);
+
+p_obs = [pole1_obs_z pole2_obs_z pole3_obs_z];
+L = place(SS_disc.A', SS_disc.C', p_obs);
+L = L';
+
+%% Variables Iniciales
+x = ones(nx, Nsim + 1) .* x0;
 
 % Salidas del simulador
 yOut  = SS_disc.C*x0; 
@@ -84,6 +85,12 @@ for k = 1:Nsim
     if k >= 3/Ts
         r_sp(k) = 0;
     end
+    if k >= 10/Ts
+        r_sp(k) = 10;
+    end
+    if k >= 11/Ts
+        r_sp(k) = 0;
+    end
     % Microcontrolador %
     e(k) = r_sp(k) - y_feedback;
 
@@ -96,11 +103,14 @@ for k = 1:Nsim
 
     % Con integrador
     u(k) = -ki*q(k) - K_new*x_hat(:, k);
-   
+    %u(k) =  - K_new*x_hat(:, k);
+    
     x_hat(:, k+1) = (SS_disc.A - L*SS_disc.C)*x_hat(:, k) + SS_disc.B*u(k) + L*y_feedback;
      
     uOut = [uOut u(k)];
-    
+%     if u(k) <= 2456
+%         u(k) = 2456;
+%     end
     u = u(k)*ones(1, numel(dt)); % ZOH de la U - DAC
 
     % Sistema en la vida real %
