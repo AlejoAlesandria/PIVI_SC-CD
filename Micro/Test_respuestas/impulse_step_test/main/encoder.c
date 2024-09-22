@@ -59,7 +59,7 @@ int read_as5600_position(void) {
         // Convierte a grados (0-360)
         angle_degrees = (angle * 360.0) / 4096.0;
         
-        //ESP_LOGI("AS5600", "Position: %.2f degrees", angle_degrees);
+        ESP_LOGI("AS5600", "Position: %d degrees", angle_degrees);
     } else {
         ESP_LOGE("AS5600", "Failed to read position");
     }

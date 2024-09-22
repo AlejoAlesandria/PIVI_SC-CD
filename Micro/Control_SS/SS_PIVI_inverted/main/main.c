@@ -39,7 +39,7 @@ int setpoint_angle = SET_POINT_VALUE;       // Setpoint angle in degrees
 int error = 0;                              // Error value
 int acumulated_error = 0;                   // Previous error value
 
-float a11 = 1.0;
+/*float a11 = 1.0;
 float a12 = 0.009975;
 float a13 = 0.000001591;
 float a21 = 0.04885;
@@ -56,11 +56,28 @@ float b31 = 0.004942;
 float c11 = 1.0;
 float c12 = 0.0;
 float c13 = 0.0;
+*/
+float a11 = 0.9917;
+float a12 = 0.04709;
+float a13 = 0.01653;
+float a21 = 0.009958;
+float a22 = 1.0;
+float a23 = 0.00008276;
+float a31 = 0.00004986;
+float a32 = 0.01;
+float a33 = 1.0;
 
+float b11 = 0.009958;
+float b21 = 0.00004986;
+float b31 = 0.0000001663;
+
+float c11 = 1.0;
+float c12 = 0.0;
+float c13 = 0.0;
 // Luenberger observer gains
-float l11 = 0.5;
-float l21 = 0.5;
-float l31 = 0.5;
+float l11 = 0.1582;
+float l21 = 0.1068;
+float l31 = 0.0698;
 
 // State variables
 float x1_hat[2] = {0.0, 0.0};         // State vector
@@ -71,8 +88,8 @@ float x3_hat[2] = {0.0, 0.0};     // State vector
 float u_signal = 0;                         // Control signal
 
 // Pole placement controller gains
-const float K_new[3] = {-116.6500, -207.9400, -196.5500};
-const float ki = 0;
+const float K_new[3] = {113.3, 2747.6, 80.1};
+const float ki = -8.6707;
 
 int angle_value_degree = 0;
 
@@ -117,18 +134,18 @@ void timer_callback(void* arg){
     //printf("x1 = %.2f \n", x1_hat[0]);
     //printf("x2 = %.2f \n", x2_hat[0]);
     //printf("x3 = %.2f \n", x3_hat[0]);
-
-    //u_signal = -ki * acumulated_error - (K_new[0] * x1_hat[0] + K_new[1] * x2_hat[0] + K_new[2] * x3_hat[0]);
-    u_signal = -(K_new[0] * x1_hat[0] + K_new[1] * x2_hat[0] + K_new[2] * x3_hat[0]);
-    //printf("u_signal = %.2f \n", u_signal);
     x1_hat[1] = (a11-l11*c11) * x1_hat[0] + (a12-l11*c12) * x2_hat[0] + (a13-l11*c13) * x3_hat[0] + b11 * u_signal + l11 * y_value_degree;
     x2_hat[1] = (a21-l21*c11) * x1_hat[0] + (a22-l21*c12) * x2_hat[0] + (a23-l21*c13) * x3_hat[0] + b21 * u_signal + l21 * y_value_degree;
     x3_hat[1] = (a31-l31*c11) * x1_hat[0] + (a32-l31*c12) * x2_hat[0] + (a33-l31*c13) * x3_hat[0] + b31 * u_signal + l31 * y_value_degree;
 
-    if(x1_hat[1] > 0){
+    u_signal = -ki * acumulated_error - (K_new[0] * x1_hat[0] + K_new[1] * x2_hat[0] + K_new[2] * x3_hat[0]);
+    //u_signal = -(K_new[0] * x1_hat[0] + K_new[1] * x2_hat[0] + K_new[2] * x3_hat[0]);
+    printf("u_signal = %.2f \n", u_signal);
+
+    if(u_signal > 0){
         motor_clockwise();
         is_clockwise = true;
-    } else if (x1_hat[1] < 0){
+    } else if (u_signal < 0){
         motor_counterclockwise();
         is_clockwise = false;
     } else{

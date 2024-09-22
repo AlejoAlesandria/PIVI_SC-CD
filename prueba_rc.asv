@@ -1,0 +1,14 @@
+clear all;
+R = 100e3;
+C = 100e-6;
+
+NUM = [1/(R*C)];
+DEN = [1 1/(R*C)];
+
+[A, B, C, D] = tf2ss(NUM, DEN);
+
+SS = ss(A, B, C, D)
+
+p1 = 1;
+
+K = place(A,B,p1)

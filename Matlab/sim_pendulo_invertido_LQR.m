@@ -15,9 +15,9 @@ r_sp = 2*ones(size(t));
 % C = [1 0 0];
 % D = 0;
 
-A = [0 1 0; 0 0 1; -0.4588 -12.83 -3.986];
-B = [-0.00008368; -0.05376; 0.01643];
-C = [1 0 0];
+A = [0.9917 0.04709 0.01653; 0.009958 1 0.00008276; 0.00004986 0.01 1];
+B = [0.009958; 0.00004986; 0.0000001663];
+C = [0 1 0];
 D = 0;
 
 % A = [0 1; -0.9903 1.99];
@@ -30,20 +30,20 @@ D = 0;
 % den = [1 0.4719 4.919];
 % [A, B, C, D] = tf2ss(num,den);
 % 
-sys_ss = ss(A, B, C, D);
+% sys_ss = ss(A, B, C, D);
+% 
+% SS_disc = c2d(sys_ss, Ts);
 
-SS_disc = c2d(sys_ss, Ts);
-
-% SS_disc = ss(A, B, C, D, Ts);
-% sys_ss = d2c(SS_disc);
+SS_disc = ss(A, B, C, D, Ts);
+sys_ss = d2c(SS_disc);
 %% Tamaño vectores Espacio de Estados
 nx = length(SS_disc.A);
 
 %% Determinación de la matriz K - LQR
-Q = diag([10000 1000 10000]);
-R = 0.1;
+Q = diag([100 100000 100 1]);
+R = 0.00000001;
 
-K_hat = lqr(SS_disc, Q, R);
+K_hat = lqi(SS_disc, Q, R);
 K_new = K_hat(1:nx);
 ki = K_hat(end);
 
@@ -53,7 +53,7 @@ x0 = zeros(1, nx)';
 x_hat = ones(nx, Nsim + 1) .* x0;
 
 % Polos en plano S
-pole1_obs = -9;
+pole1_obs = -10;
 pole2_obs = -1+j*0.2;
 pole3_obs = -1-j*0.2;
 % Polos mapeados a plano Z
@@ -88,6 +88,9 @@ for k = 1:Nsim
     if k >= 10/Ts
         r_sp(k) = 10;
     end
+    % if k >= 11/Ts
+    %     r_sp(k) = 0;
+    % end
     % Microcontrolador %
     e(k) = r_sp(k) - y_feedback;
 
@@ -105,7 +108,9 @@ for k = 1:Nsim
     x_hat(:, k+1) = (SS_disc.A - L*SS_disc.C)*x_hat(:, k) + SS_disc.B*u(k) + L*y_feedback;
      
     uOut = [uOut u(k)];
-    
+%     if u(k) <= 2456
+%         u(k) = 2456;
+%     end
     u = u(k)*ones(1, numel(dt)); % ZOH de la U - DAC
 
     % Sistema en la vida real %
@@ -136,39 +141,14 @@ grid on
 %% Gráficos de la estimación de los estados
 figure(3)
 hold on
-subplot(2,1,1)
-    hold on
-    for i = 1:nx
-        plot(t, x_hat(i, 1:Nsim+1));
-    end
-    legend('x_{hat}(1)','x_{hat}(2)','x_{hat}(3)');
-    grid on
-    title('Estimación de los estados x_hat');
-    xlabel('Tiempo [s]');
-    ylabel('Estados estimados');
-subplot(2,1,2)
-    hold on
-    for i = 1:nx
-        plot(t, x(i, 1:Nsim+1));
-    end
-    legend('x(1)','x(2)','x(3)');
-    grid on
-    title('Estados reales x');
-    xlabel('Tiempo [s]');
-    ylabel('Estados estimados');
-
-%% Gráficos de la estimación de los estados junto
-figure(4)
-hold on
 for i = 1:nx
     plot(t, x_hat(i, 1:Nsim+1));
 end
-legend('x_{hat}(1)','x_{hat}(2)','x_{hat}(3)');
 for i = 1:nx
     plot(t, x(i, 1:Nsim+1));
 end
-legend('x_{hat}(1)','x_{hat}(2)','x_{hat}(3)','x(1)','x(2)','x(3)');
-grid on
-title('Estados reales x y estimados x_{hat}');
+legend('x_{hat}(1)','x_{hat}(2)', 'x_{hat}(3)','x(1)','x(2)', 'x(3)');
+title('Estimación de los estados x_hat');
 xlabel('Tiempo [s]');
 ylabel('Estados estimados');
+grid on
