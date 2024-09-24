@@ -10,13 +10,13 @@ t = 0:Ts:Tf;
 r_sp = ones(size(t));
 
 %% Espacio de estados identificado invertido - ecuacion calculada
-% A = [0 1 0; 4.8976 -0.52198 0.319; 0 0 -0.33792];
-% B = [0; -0.468; 0.495];
+% A = [0 1 0; 0 0 1; -0.4588 -12.83 -3.986];
+% B = [-0.00008368; -0.05376; 0.01643];
 % C = [1 0 0];
 % D = 0;
 
-% A = [0 1 0; 0 0 1; -0.4588 -12.83 -3.986];
-% B = [-0.00008368; -0.05376; 0.01643];
+% A = [0 1 0; 0 0 1; -1112 -99.35 -295.8];
+% B = [0.1053; -35.72; 10520];
 % C = [1 0 0];
 % D = 0;
 
@@ -25,11 +25,6 @@ B = [0.001527; 0.01147];
 C = [1 0];
 D = 0;
 
-% Funcion de transferencia Pendulo natural
-% num = [-0.001862 -0.05642];
-% den = [1 0.4719 4.919];
-% [A, B, C, D] = tf2ss(num,den);
-% 
 sys_ss = ss(A, B, C, D);
 
 SS_disc = c2d(sys_ss, Ts);
@@ -40,8 +35,12 @@ SS_disc = c2d(sys_ss, Ts);
 nx = length(SS_disc.A);
 
 %% Determinación de la matriz K - LQR
-Q = diag([10000000 10000 1000]);
+% Q = diag([1000000000 1 1 100000]);
+% R = 0.0000000001;
+Q = diag([10000000 1000 10000]);
 R = 0.001;
+% Q = diag([10000000 10000 1000]);
+% R = 0.001;
 
 % Q = diag([10000 100 1]);
 % R = 1;
@@ -76,7 +75,7 @@ y_feedback = SS_disc.C*x0;
 %% Representa el tiempo real, cuanto tiempo está corriendo el
 % microcontrolador, el tiempo entre interrupciones el tiempo de muestreo
 for k = 1:Nsim
-    if k >= 3/Ts
+    if k >= 5/Ts
         r_sp(k) = 5;
     end
     % Microcontrolador %

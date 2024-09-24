@@ -70,7 +70,7 @@ int angle_value_degree = 0;
 int y_value_degree = 0;
 
 // Supposedly Kalman
-float R_kalman, q1, q2; // Covarianzas
+float q1, q2; // Covarianzas
 float x1_hat = 0.0, x2_hat = 0.0; // Estados estimados
 float P_k11 = 1.0, P_k12 = 0.0, P_k21 = 0.0, P_k22 = 1.0; // Matriz de covarianza
 float P_k_pred11, P_k_pred12, P_k_pred21, P_k_pred22; // Matriz de covarianza predicha
@@ -79,10 +79,10 @@ float S = 0.0;
 float K11 = 0.0, K21 = 0.0; // Coeficientes de corrección
 float y_hat = 0.0, y_error = 0.0; // Variables de error
 
-float q11 = 0.000001;
-float q22 = 0.000001;
+float q11 = 10;
+float q22 = 10;
 
-float r = 0.1;
+float R_kalman = 0.0001;
 //
 
 // Handles
