@@ -28,7 +28,7 @@
 #include "math.h"
 
 // Defines
-#define INDEX               2000
+#define INDEX               3000
 #define SAMPLE_TIME_US      10000
 #define DUTY_CYCLE          4095
 #define FROM_LOW            0

@@ -18,6 +18,8 @@
 #include "math.h"
 
 #define PRINT_TASK_PERIOD_MS 10
+#define SAMPLE_INDEX        3000
+
 #define SET_POINT_VALUE     0     // Pendulum angular position in degrees
 #define SAMPLE_TIME_US      10000   // Sample time in microseconds (us)
 
@@ -30,14 +32,15 @@
 // LQR controller gains
 const float K_new[3] = {-805.7053, -66.7527, -0.2154};//{842.2070, 256.0781};//{3636.6, 2235.8};//{842.2070, 256.0781}; // ANDAN {32.2661, 36.6317}
 const float ki = 8.1492;//0.0;//-9.7885;//-26.2541;
+const float Ts = SAMPLE_TIME_US / 1000000.0;
 
 // Kalman filter parameters
 
-float q11 = 10;
-float q22 = 10;
-float q33 = 10;
+float q11 = 100;
+float q22 = 100;
+float q33 = 100;
 
-float R_kalman = 0.001;
+float R_kalman = 0.00001;
 
 // Variables
 int pwm_output_bits = 0;           // Last PID output value to apply to the motor
@@ -66,7 +69,7 @@ float c12 = 0.0;
 float c13 = 0.0;
 
 // Control signal
-float u_signal = 0;     // Control signal
+float u_signal = 0;
 
 int angle_value_degree = 0;
 
@@ -83,6 +86,15 @@ float S = 0.0;
 float K11 = 0.0, K21 = 0.0, K31 = 0.0; // Coeficientes de corrección
 float y_hat = 0.0, y_error = 0.0; // Variables de error
 
+// Print variables
+int index_value = 0;                // Index for output array
+bool is_clockwise = false;          // Motor direction flag for plotting
+int y_signal_print[SAMPLE_INDEX];     // Output values for plotting
+int u_signal_print[SAMPLE_INDEX];       // output values for plotting
+float x1_pred_print[SAMPLE_INDEX];
+float x2_pred_print[SAMPLE_INDEX];
+float x3_pred_print[SAMPLE_INDEX];
+
 // Handles
 esp_timer_handle_t timer_handle;
 TaskHandle_t xTaskPrint_handle = NULL;
@@ -90,8 +102,8 @@ portMUX_TYPE _spinlock = portMUX_INITIALIZER_UNLOCKED;
 
 // Function prototypes
 void timer_callback(void* arg);     // Timer callback function - periodic task Ts = 0.01 s
-void vTaskPrint();
 long map(long x, long in_min, long in_max, long out_min, long out_max); 
+void print_values();
 
 void app_main(void){
     encoder_init();
@@ -104,19 +116,26 @@ void app_main(void){
         .name = "State Space Timer"
     };
     esp_timer_create(&timer_args, &timer_handle);
+    vTaskDelay(pdMS_TO_TICKS(5000));
     esp_timer_start_periodic(timer_handle, SAMPLE_TIME_US);
-
-    // Tasks creation
-    xTaskCreate(&vTaskPrint,
-                "vTaskPrint",
-                configMINIMAL_STACK_SIZE * 5,
-                NULL,
-                1,
-                &xTaskPrint_handle);
-    //
+    
+    while (true) { 
+        if (!esp_timer_is_active(timer_handle)) {
+            printf("Setpoint sequence completed, printing output values:\n");
+            print_values();
+            break;
+        }
+        vTaskDelay(1000/portTICK_PERIOD_MS);
+    }
 }
 
 void timer_callback(void* arg){  
+    if (index_value == SAMPLE_INDEX) {
+        motor_stop();
+        ledc_set_duty_and_update(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0, 0);
+        esp_timer_stop(timer_handle);
+        return;
+    }
     // Read encoder value
     angle_value_degree = read_as5600_position();
     y_value_degree = angle_value_degree - 150;
@@ -181,17 +200,31 @@ void timer_callback(void* arg){
 
     if(u_signal > 0){
         motor_clockwise();
+        is_clockwise = true;
     } else if (u_signal < 0){
         motor_counterclockwise();
+        is_clockwise = false;
     } else {
         motor_stop();
         ledc_set_duty_and_update(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, abs((int) u_signal), 0);
+        is_clockwise = true;
     } 
     pwm_output_bits = map(abs((long) u_signal), FROM_LOW, FROM_HIGH, TO_LOW, TO_HIGH);
     
     // Set PWM duty cycle
     ledc_set_duty_and_update(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, pwm_output_bits, 0);
     
+    if(!is_clockwise){
+        u_signal_print[index_value] = pwm_output_bits;
+    } else{
+        u_signal_print[index_value] = -pwm_output_bits;
+        is_clockwise = true;
+    }
+    y_signal_print[index_value] = y_value_degree;
+    x1_pred_print[index_value] = x1_hat;
+    x2_pred_print[index_value] = x2_hat;
+    x3_pred_print[index_value] = x3_hat;
+
     // Anti-windup
     if (u_signal == -4095) {
         if(error > 0) {
@@ -211,38 +244,19 @@ void timer_callback(void* arg){
     } else if (accumulated_error < -1000){
         accumulated_error = -1000;
     }
+
+    index_value++;
 }
 
-void vTaskPrint(void *pvParameters){
-    TickType_t xLastWakeTime = xTaskGetTickCount();
-    float fb_value_v_l = 0.0;
-    float error_l = 0.0;
-    float accumulated_error_l = 0.0;
-    float x1_hat_l = 0.0;
-    float x2_hat_l = 0.0;
-    double x3_hat_l = 0.0;
-    int pwm_output_bits_l = 0;
-
-    while(true){
-        taskENTER_CRITICAL(&_spinlock);
-        fb_value_v_l = y_value_degree;
-        error_l = error;
-        accumulated_error_l = accumulated_error;
-        x1_hat_l = x1_hat;
-        x2_hat_l = x2_hat;
-        x3_hat_l = x3_hat;
-        pwm_output_bits_l = pwm_output_bits;
-        taskEXIT_CRITICAL(&_spinlock);
-
-        printf("Feedback: %.2f Grados \n", fb_value_v_l);
-        printf("Error: %.2f Grados \n", error_l);
-        printf("q: %.2f \n", accumulated_error_l);
-        printf("x1: %.2f \n",x1_hat_l);
-        printf("x2: %.2f \n",x2_hat_l);
-        printf("x3: %.2f \n",x3_hat_l);
-        printf("PWM: %d \n", pwm_output_bits_l);
-        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(PRINT_TASK_PERIOD_MS));
+// Function to print output values for plotting
+void print_values(){
+    printf("INICIO\n");
+    for(int i = 0; i < SAMPLE_INDEX; i++) {
+        printf("%.2f,%d,%d,%.2f,%.2f,%.2f\n", 
+            i * Ts, u_signal_print[i], y_signal_print[i], x1_pred_print[i], x2_pred_print[i], x3_pred_print[i]);
+        vTaskDelay(10 / portTICK_PERIOD_MS);
     }
+    printf("FIN\n");
 }
 
 long map(long x, long in_min, long in_max, long out_min, long out_max){
