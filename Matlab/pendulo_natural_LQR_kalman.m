@@ -2,12 +2,12 @@ clear all;
 close all;
 %% Parámetros de Simulación
 Ts = 0.01;
-Tf = 10;
+Tf = 15;
 Nsim = Tf/Ts;
 t = 0:Ts:Tf;
 
 %% Señal de Entrada - Set Point
-r_sp = ones(size(t));
+r_sp = zeros(size(t));
 
 %% Espacio de estados identificado invertido - ecuacion calculada
 % A = [0 1 0; 0 0 1; -0.4588 -12.83 -3.986];
@@ -54,8 +54,8 @@ x0 = zeros(1, nx)';
 x_hat = ones(nx, Nsim + 1) .* x0; % Estados estimados
 
 % Definir las matrices de covarianza del proceso y de la medición
-Q_kalman = 1e-3 * eye(nx);  % Matriz de covarianza del ruido del proceso
-R_kalman = 1e-3;            % Covarianza del ruido de medición (ajústalo según el sistema)
+Q_kalman = 10 * eye(nx);  % Matriz de covarianza del ruido del proceso
+R_kalman = 0.001;            % Covarianza del ruido de medición (ajústalo según el sistema)
 P_kalman = eye(nx);               % Matriz de covarianza inicial
 P_kalman_pred = eye(nx).*0;
 
@@ -71,19 +71,28 @@ integral_error = zeros(1, Nsim);
 e = zeros(1, Nsim);
 q = zeros(1, Nsim);
 y_feedback = SS_disc.C*x0;
-
 %% Representa el tiempo real, cuanto tiempo está corriendo el
 % microcontrolador, el tiempo entre interrupciones el tiempo de muestreo
 for k = 1:Nsim
+%     if k >= 5/Ts
+%         r_sp(k) = 0;
+%         x(:,k) = [21; -593.76; 145763.12];
+%     end
+%     if k >= 7/Ts
+%         x(:,k) = [0;-153.71;25753.42];
+%     end
     if k >= 5/Ts
-        r_sp(k) = 5;
+        r_sp(k) = 3;
     end
+    % 5.28,-4095.0,21.0,21.0,-593.76,145763.12
+    % 6.94,137.0,0.0,-0.0,-153.71,25753.42
     % Microcontrolador %
     e(k) = r_sp(k) - y_feedback;
 
     % Planta sin integrador
     %u(k) = -ki*q(k) - K_new*x_hat(:, k);
     % Planta con integrador
+       
     u(k) = -ki*q(k)- K_new*x_hat(:, k);
     if u(k) > 4095
         u(k) = 4095;
@@ -117,28 +126,34 @@ end
 
 %% Gráficos
 figure(1)
+subplot(2,1,1)
 plot(tOut, yOut);
 hold on
 stairs(t, SS_disc.C*x);
 plot(t, r_sp);
 legend('output', 'sampled', 'set-point')
+title('Salida del sistema y');
+ylabel('y');
+ylim([-0.5 4]);
 grid on
 
-figure(2)
+subplot(2,1,2)
 hold on
 plot(t, uOut)
 legend('u signal')
+title('Señal de entrada u');
+ylabel('u');
 grid on
 
 %% Gráficos de la estimación de los estados
-figure(3)
+figure(2)
 hold on
 subplot(2,1,1)
     hold on
     for i = 1:nx
         plot(t, x_hat(i, 1:Nsim+1));
     end
-    legend('x_{hat}(1)','x_{hat}(2)');
+    legend('x_{hat}(1)','x_{hat}(2)', 'x_{hat}(3)');
     grid on
     title('Estimación de los estados x_{hat}');
     xlabel('Tiempo [s]');
@@ -148,24 +163,51 @@ subplot(2,1,2)
     for i = 1:nx
         plot(t, x(i, 1:Nsim+1));
     end
-    legend('x(1)','x(2)');
+    legend('x(1)','x(2)','x(3)');
     grid on
     title('Estados reales x');
     xlabel('Tiempo [s]');
     ylabel('Estados estimados');
 
 %% Gráficos de la estimación de los estados junto
-figure(4)
+figure(3)
 hold on
 for i = 1:nx
     plot(t, x_hat(i, 1:Nsim+1));
 end
-legend('x_{hat}(1)','x_{hat}(2)');
 for i = 1:nx
     plot(t, x(i, 1:Nsim+1));
 end
-legend('x_{hat}(1)','x_{hat}(2)','x(1)','x(2)');
+legend('x_{hat}(1)','x_{hat}(2)', 'x_{hat}(3)', 'x(1)','x(2)','x(3)');
 grid on
 title('Estados reales x y estimados x_{hat}');
 xlabel('Tiempo [s]');
 ylabel('Estados estimados');
+
+figure(4)
+hold on
+subplot(3,1,1)
+plot(t,x_hat(1,1:Nsim+1));
+legend('x_{hat}(1)');
+grid on
+title('Estados estimado x_{hat}(1)');
+xlabel('Tiempo [s]');
+ylabel('x_{hat}(1)');
+ylim([-0.5 4]);
+
+
+subplot(3,1,2)
+plot(t,x_hat(2,1:Nsim+1));
+legend('x_{hat}(2)');
+grid on
+title('Estados estimado x_{hat}(2)');
+xlabel('Tiempo [s]');
+ylabel('x_{hat}(2)');
+
+subplot(3,1,3)
+plot(t,x_hat(3,1:Nsim+1));
+legend('x_{hat}(3)');
+grid on
+title('Estados estimado x_{hat}(3)');
+xlabel('Tiempo [s]');
+ylabel('x_{hat}(3)');
