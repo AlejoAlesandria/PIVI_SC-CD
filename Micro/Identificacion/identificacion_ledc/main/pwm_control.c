@@ -27,7 +27,7 @@ void ledc_timer_configuration(void){
         .speed_mode = LEDC_LOW_SPEED_MODE,
         .timer_num = LEDC_TIMER_0,
         .duty_resolution = LEDC_TIMER_12_BIT,
-        .freq_hz = 100,
+        .freq_hz = 1000,
         .clk_cfg = LEDC_AUTO_CLK,
     };
 
@@ -47,7 +47,7 @@ void ledc_channel_configuration(void){
 
     ESP_ERROR_CHECK(ledc_channel_config(&channel_config));
     ESP_ERROR_CHECK(ledc_fade_func_install(0));
-    ESP_ERROR_CHECK(ledc_set_duty_and_update(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 2048, 0));
+    //ESP_ERROR_CHECK(ledc_set_duty_and_update(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 2048, 0));
 }
 
 void gpio_pin_configuration(void){
