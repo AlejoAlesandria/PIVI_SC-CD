@@ -28,8 +28,8 @@
 #define TO_HIGH             4095    // Final PWM range maximum value (100 %)
 
 // LQR controller gains
-const float K_new[3] = {-805.7053, -66.7527, -0.2154};//{842.2070, 256.0781};//{3636.6, 2235.8};//{842.2070, 256.0781}; // ANDAN {32.2661, 36.6317}
-const float ki = 8.1492;//0.0;//-9.7885;//-26.2541;
+const float K_new[3] = {-805.7053, -66.7527, -0.2154};//{842.2070, 256.0781};
+const float ki = 8.1492;
 
 // Kalman filter parameters
 
@@ -47,7 +47,7 @@ int error = 0;                              // Error value
 int accumulated_error = 0;                  // Accumulated error value
 
 // State Space matrix
-float a11 = 0.9999; //anda
+float a11 = 0.9999;
 float a12 = 0.009991;
 float a13 = 0.00002296;
 float a21 = -0.02553;
@@ -74,14 +74,14 @@ int angle_value_degree = 0;
 int y_value_degree = 0;
 
 // Kalman filter variables
-float q1, q2, q3; // Covarianzas
-float x1_hat = 0.0, x2_hat = 0.0, x3_hat = 0.0; // Estados estimados
-float P_k11 = 1.0, P_k12 = 0.0, P_k13, P_k21 = 0.0, P_k22 = 1.0, P_k23, P_k31, P_k32, P_k33; // Matriz de covarianza
-float P_k_pred11 = 1.0, P_k_pred12 = 0.0, P_k_pred13, P_k_pred21 = 0.0, P_k_pred22 = 1.0, P_k_pred23, P_k_pred31, P_k_pred32, P_k_pred33;; // Matriz de covarianza predicha
-float x1_pred, x2_pred, x3_pred; // Estados predichos
+float q1, q2, q3; // Covariances
+float x1_hat = 0.0, x2_hat = 0.0, x3_hat = 0.0; // Estimated states
+float P_k11 = 1.0, P_k12 = 0.0, P_k13, P_k21 = 0.0, P_k22 = 1.0, P_k23, P_k31, P_k32, P_k33; // Covariance matrix
+float P_k_pred11 = 1.0, P_k_pred12 = 0.0, P_k_pred13, P_k_pred21 = 0.0, P_k_pred22 = 1.0, P_k_pred23, P_k_pred31, P_k_pred32, P_k_pred33;; // Predicted covariance matrix
+float x1_pred, x2_pred, x3_pred; // Predicted states
 float S = 0.0;
-float K11 = 0.0, K21 = 0.0, K31 = 0.0; // Coeficientes de corrección
-float y_hat = 0.0, y_error = 0.0; // Variables de error
+float K11 = 0.0, K21 = 0.0, K31 = 0.0; // Correction coefficients
+float y_hat = 0.0, y_error = 0.0; // Error variables
 
 // Handles
 esp_timer_handle_t timer_handle;
